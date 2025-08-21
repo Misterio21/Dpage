@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="cs">
+<head>
+    <meta charset="UTF-8">
+    <title>Výpočet s koeficienty</title>
+    <link rel="stylesheet" href="index.css">
+</head>
+<body>
+    <h1>Zadání koeficientů a údajů</h1>
+    <form id="coefForm">
+        <!-- Koeficienty -->
+        <div class="form-group">
+            <label for="coef1">Koeficient 1:</label>
+            <input type="number" id="coef1" step="any" required>
+        </div>
+        <div class="form-group">
+            <label for="coef2">Koeficient 2:</label>
+            <input type="number" id="coef2" step="any" required>
+        </div>
+        <div class="form-group">
+            <label for="coef3">Koeficient 3:</label>
+            <input type="number" id="coef3" step="any" required>
+        </div>
+        <div class="form-group">
+            <label for="expected">Očekávané množství:</label>
+            <input type="number" id="expected" step="any" required>
+        </div>
+
+        <!-- Skupiny pracovníků -->
+        <h2>Pracovní skupiny</h2>
+        <div id="workerGroups">
+            <div class="worker-group">
+                <input type="number" name="workers[]" min="1" placeholder="Počet pracovníků" required>
+                <input type="time" name="timeFrom[]" value="00:00" required>
+                <input type="time" name="timeTo[]" value="00:00" required>
+                <button type="button" class="remove-btn">❌ Odebrat</button>
+            </div>
+        </div>
+        <button type="button" id="addGroup">➕ Přidat skupinu</button>
+        <br><br>
+        <button type="submit">Odeslat</button>
+    </form>
+
+    <div id="result"></div>
+
+    <script src="index.js"></script>
+</body>
+</html>
