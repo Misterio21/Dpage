@@ -8,7 +8,6 @@
 <body>
     <h1>Zadání koeficientů a údajů</h1>
     <form id="coefForm">
-        <!-- Koeficienty -->
         <div class="form-group">
             <label for="coef1">Koeficient 1:</label>
             <input type="number" id="coef1" step="any" required>
@@ -26,7 +25,6 @@
             <input type="number" id="expected" step="any" required>
         </div>
 
-        <!-- Skupiny pracovníků -->
         <h2>Pracovní skupiny</h2>
         <div id="workerGroups">
             <div class="worker-group">
@@ -41,7 +39,7 @@
         <button type="submit">Odeslat</button>
     </form>
 
-    <div id="result"></div>
+    <div id="result" class="hidden"></div>
 
     <script src="index.js"></script>
 </body>
