@@ -120,6 +120,12 @@ document.getElementById("coefForm").addEventListener("submit", function(event){
         let w = parseInt(workers[i].value);
         let diffM = parseTimeToMinutes(timesTo[i].value) - parseTimeToMinutes(timesFrom[i].value);
         if(diffM<0) diffM+=24*60;
+
+        // Pauza 30 minut, pokud pracuje víc než 6h
+        if(diffM > 6*60){
+            diffM -= 30;
+        }
+
         totalHours += (diffM/60)*w;
     }
 
@@ -149,7 +155,6 @@ document.getElementById("coefForm").addEventListener("submit", function(event){
             <p>Očekávaný stav by musel být ${expectedNew.toFixed(2)}, aby inventura vyšla ✅</p>
         `;
 
-        // Potřebné hodiny pro všechny koeficienty
         rozdilText += `<p><strong>Potřebné hodiny pro koeficienty:</strong><br>
             Hodiny 1: ${hoursToTime(hodiny[0])}<br>
             Hodiny 2: ${hoursToTime(hodiny[1])}<br>
@@ -184,8 +189,13 @@ document.getElementById("coefForm").addEventListener("submit", function(event){
     let groupsToSave = Array.from(workers).map((w,i)=>({workers:w.value,from:timesFrom[i].value,to:timesTo[i].value}));
     localStorage.setItem("workerGroups", JSON.stringify(groupsToSave));
 
-    // Zobrazení výsledku
+    // 🔹 Přidaný výpis celkových hodin
     let resultDiv = document.getElementById("result");
-    resultDiv.innerHTML = `<p><strong>${erko}</strong></p>${rozdilText}`;
+    resultDiv.innerHTML = `
+        <p><strong>${erko}</strong></p>
+        <p><strong>Celkem odpracováno: ${hoursToTime(totalHours)} h</strong></p>
+        ${rozdilText}
+    `;
     resultDiv.style.display = "block";
 });
+
