@@ -2,45 +2,291 @@
 <html lang="cs">
 <head>
     <meta charset="UTF-8">
-    <title>Výpočet s koeficienty</title>
-    <link rel="stylesheet" href="index.css">
+    <title>Načtení pracovníků z PDF</title>
+
+    <!-- pdf.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f4f4;
+            padding: 20px;
+        }
+        #pdfBox {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            max-width: 700px;
+            margin: auto;
+            box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 15px;
+        }
+        th, td {
+            border: 1px solid #ccc;
+            padding: 8px 10px;
+            text-align: left;
+        }
+        th {
+            background: #4CAF50;
+            color: white;
+        }
+        .gold-row {
+    background-color: rgb(255, 238, 138) !important;
+}
+
+    </style>
 </head>
 <body>
-    <h1>Zadání koeficientů a údajů</h1>
-    <form id="coefForm">
-        <div class="form-group">
-            <label for="coef1">Koeficient 1:</label>
-            <input type="number" id="coef1" step="any" required>
-        </div>
-        <div class="form-group">
-            <label for="coef2">Koeficient 2:</label>
-            <input type="number" id="coef2" step="any" required>
-        </div>
-        <div class="form-group">
-            <label for="coef3">Koeficient 3:</label>
-            <input type="number" id="coef3" step="any" required>
-        </div>
-        <div class="form-group">
-            <label for="expected">Očekávané množství:</label>
-            <input type="number" id="expected" step="any" required>
-        </div>
 
-        <h2>Pracovní skupiny</h2>
-        <div id="workerGroups">
-            <div class="worker-group">
-                <input type="number" name="workers[]" min="1" placeholder="Počet pracovníků" required>
-                <input type="time" name="timeFrom[]" value="00:00" required>
-                <input type="time" name="timeTo[]" value="00:00" required>
-                <button type="button" class="remove-btn">❌ Odebrat</button>
-            </div>
-        </div>
-        <button type="button" id="addGroup">➕ Přidat skupinu</button>
-        <br><br>
-        <button type="submit">Odeslat</button>
-    </form>
+<div id="pdfBox">
+    <h2>Načíst PDF s pracovníky</h2>
 
-    <div id="result" class="hidden"></div>
+    <input type="file" id="pdfInput" accept="application/pdf">
+    <button id="loadPdfBtn">Načíst PDF</button>
+    <div id="bulkEditBox" style="display:none; margin-top:20px; background:#fff; padding:10px; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.1); max-width:700px;">
+    <h3>Hromadná změna času</h3>
 
-    <script src="index.js"></script>
+    <label>Nový začátek:</label>
+    <input type="time" id="bulkStart">
+
+    <label>Nový konec:</label>
+    <input type="time" id="bulkEnd">
+
+    <button id="applyBulk">Použít na vybrané</button>
+    </div>
+
+    <table id="workersTable" style="display:none;">
+        <thead>
+    <tr>
+        <th>Vybrat</th>
+        <th>Jméno</th>
+        <th>ID</th>
+        <th>Začátek</th>
+        <th>Konec</th>
+        <th>Storno</th>
+    </tr>
+</thead>
+
+
+        <tbody id="workersBody"></tbody>
+    </table>
+
+    <div id="totalHoursBox" style="margin-top: 15px; font-weight: bold;"></div>
+
+</div>
+
+<script>
+document.getElementById("loadPdfBtn").addEventListener("click", async () => {
+    let file = document.getElementById("pdfInput").files[0];
+    if (!file) {
+        alert("Vyber PDF.");
+        return;
+    }
+
+    let arrayBuffer = await file.arrayBuffer();
+    let pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+
+    let fullText = "";
+    for (let i = 1; i <= pdf.numPages; i++) {
+        let page = await pdf.getPage(i);
+        let content = await page.getTextContent();
+        let strings = content.items.map(item => item.str).join(" ");
+        fullText += strings + "\n";
+    }
+
+    extractWorkers(fullText);
+});
+
+function extractWorkers(text) {
+    let tbody = document.getElementById("workersBody");
+    tbody.innerHTML = "";
+
+let regex =
+  /(\d+)\s+(\d+)\s+(.+?)\s+([A-Z0-9]{5,})\s+([A-Ž][a-ž]+)\s+([A-Ž][a-ž]+)\s+(\S+)\s+(\d{1,2}:\d{2})/g;
+
+    let match;
+    while ((match = regex.exec(text)) !== null) {
+
+let upresneni = match[3].trim(); // Upřesnění
+let id        = match[4];
+let jmeno     = match[5] + " " + match[6];
+let role      = match[7];
+let start     = match[8];
+
+        let [h, m] = start.split(":").map(Number);
+        let totalMinutes = h * 60 + m;
+
+        let konec;
+        if (totalMinutes >= 17 * 60 && totalMinutes <= 18 * 60) {
+            konec = "03:00";
+        } else {
+            konec = "02:00";
+        }
+
+        let row = document.createElement("tr");
+
+        row.innerHTML = `
+            <td><input type="checkbox" class="select-worker"></td>
+            <td>${jmeno}</td>
+            <td>${id}</td>
+            <td><input type="time" class="start-time" value="${start}"></td>
+            <td><input type="time" class="end-time" value="${konec}"></td>
+            <td><input type="checkbox" class="storno-box"></td>
+        `;
+
+        let startInput = row.querySelector(".start-time");
+        let endInput = row.querySelector(".end-time");
+        let stornoBox = row.querySelector(".storno-box");
+
+        // Storno → oba časy 00:00
+        stornoBox.addEventListener("change", () => {
+            if (stornoBox.checked) {
+                startInput.value = "00:00";
+                endInput.value = "00:00";
+            }
+            updateRowHighlight(row);
+            updateRowRed(row, upresneni, role);
+            updateRowRedAndGold(row, upresneni, role);
+
+        });
+
+        // změna času → aktualizovat zvýraznění
+        startInput.addEventListener("change", () => { 
+    updateRowRedAndGold(row, upresneni, role);
+    updateTotalHours();
+});
+endInput.addEventListener("change", () => { 
+    updateRowRedAndGold(row, upresneni, role);
+    updateTotalHours();
+});
+
+
+        tbody.appendChild(row);
+
+        // ✅ zvýrazni hned po vytvoření
+        //updateRowHighlight(row);
+        updateRowRedAndGold(row, upresneni, role);
+        updateTotalHours();
+    }
+
+    document.getElementById("workersTable").style.display = "table";
+    document.getElementById("bulkEditBox").style.display = "block";
+}
+
+
+document.getElementById("applyBulk").addEventListener("click", () => {
+    let newStart = document.getElementById("bulkStart").value;
+    let newEnd   = document.getElementById("bulkEnd").value;
+
+    // najdeme vybrané pracovníky
+    let checkboxes = document.querySelectorAll(".select-worker:checked");
+
+    if (checkboxes.length === 0) {
+        alert("Nejsou vybraní žádní pracovníci.");
+        return;
+    }
+
+    checkboxes.forEach(cb => {
+        let row = cb.closest("tr");
+        let startInput = row.querySelector(".start-time");
+        let endInput = row.querySelector(".end-time");
+        let stornoBox = row.querySelector(".storno-box");
+
+        // pokud je newStart prázdné → nech původní startInput.value
+        if (newStart) startInput.value = newStart;
+
+        // pokud je newEnd prázdné → nech původní endInput.value
+        if (newEnd) endInput.value = newEnd;
+
+        // aktualizace barvy řádku
+        if (stornoBox.checked) {
+            row.classList.remove("gold-row"); // storno = žádné zvýraznění
+        } else {
+            updateRowHighlight(row); // normální výpočet podle směny
+        }
+
+        updateTotalHours();
+
+    });
+});
+
+
+function getShiftHours(start, end) {
+    let [sh, sm] = start.split(":").map(Number);
+    let [eh, em] = end.split(":").map(Number);
+
+    let startMin = sh * 60 + sm;
+    let endMin = eh * 60 + em;
+
+    // konec po půlnoci
+    if (endMin < startMin) {
+        endMin += 24 * 60;
+    }
+
+    return (endMin - startMin) / 60;
+}
+
+
+function updateRowRedAndGold(row, upresneni, role) {
+    let startInput = row.querySelector(".start-time");
+    let endInput   = row.querySelector(".end-time");
+    let start = startInput.value;
+    let end = endInput.value;
+
+    let hours = getShiftHours(start, end);
+
+    let isCH = upresneni.includes("CH");
+    let isZ  = /^Z\d+$/.test(role);
+    let isS  = role === "S";
+
+    let isRed  = isCH || isZ || isS;
+    let isGold = hours > 6;
+
+    if (isRed && isGold) {
+        row.style.background = "linear-gradient(to right, rgb(255,150,150) 50%, rgb(255,238,138) 50%)";
+    } else if (isRed) {
+        row.style.background = "rgb(255,150,150)";
+    } else if (isGold) {
+        row.style.background = "rgb(255,238,138)";
+    } else {
+        row.style.background = "";
+    }
+}
+
+
+
+function updateTotalHours() {
+    let totalMinutes = 0;
+    document.querySelectorAll("#workersBody tr").forEach(row => {
+        let start = row.querySelector(".start-time").value;
+        let end   = row.querySelector(".end-time").value;
+
+        if (!start || !end || start === "00:00" && end === "00:00") return;
+
+        let hours = getShiftHours(start, end);
+
+        // odečti 30 minut pauzu pro zlaté
+        if (hours > 6) hours -= 0.5;
+
+        totalMinutes += hours;
+    });
+
+    document.getElementById("totalHoursBox").textContent = 
+        "Celkem odpracováno: " + totalMinutes.toFixed(2) + " hodin";
+}
+
+
+
+
+
+
+
+</script>
+
 </body>
 </html>
