@@ -107,16 +107,20 @@ function extractWorkers(text) {
     tbody.innerHTML = "";
 
 let regex =
-  /(\d+)\s+(\d+)\s+(.+?)\s+([A-Z0-9]{5,})\s+([A-Ž][a-ž]+)\s+([A-Ž][a-ž]+)\s+(\S+)\s+(\d{1,2}:\d{2})/g;
+/(\d+)\s+(\S+)\s+(\S+)\s+(.+?)\s+([A-Z0-9]{6})\s+([A-Ž][a-ž]+)\s+([A-Ž][a-ž]+)\s+([A-Z0-9]+(?:\s*\([A-Z]\))?)\s+(\d{1,2}:\d{2})\s+(?:\d{1,2}:\d{2})?\s*\+420/g;
+
+
+
 
     let match;
     while ((match = regex.exec(text)) !== null) {
 
-let upresneni = match[3].trim(); // Upřesnění
-let id        = match[4];
-let jmeno     = match[5] + " " + match[6];
-let role      = match[7];
-let start     = match[8];
+let upresneni = match[4].trim();
+let id        = match[5];
+let jmeno     = match[6] + " " + match[7];
+let rawRole = match[8];
+let role = rawRole.replace(/\(.*?\)/g, "").trim();
+let start     = match[9];
 
         let [h, m] = start.split(":").map(Number);
         let totalMinutes = h * 60 + m;
@@ -149,9 +153,8 @@ let start     = match[8];
                 startInput.value = "00:00";
                 endInput.value = "00:00";
             }
-            updateRowHighlight(row);
-            updateRowRed(row, upresneni, role);
             updateRowRedAndGold(row, upresneni, role);
+            updateTotalHours(); 
 
         });
 
@@ -169,7 +172,6 @@ endInput.addEventListener("change", () => {
         tbody.appendChild(row);
 
         // ✅ zvýrazni hned po vytvoření
-        //updateRowHighlight(row);
         updateRowRedAndGold(row, upresneni, role);
         updateTotalHours();
     }
@@ -206,8 +208,6 @@ document.getElementById("applyBulk").addEventListener("click", () => {
         // aktualizace barvy řádku
         if (stornoBox.checked) {
             row.classList.remove("gold-row"); // storno = žádné zvýraznění
-        } else {
-            updateRowHighlight(row); // normální výpočet podle směny
         }
 
         updateTotalHours();
